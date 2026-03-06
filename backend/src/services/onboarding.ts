@@ -29,6 +29,11 @@ import {
   validateWithdrawalAmount,
   getStellarExpertLink,
 } from "./withdrawal";
+import {
+  buildPortfolioBalanceReply,
+  formatMidOnboardingReply,
+  isBalanceIntent,
+} from "./portfolio";
 
 // ─── Strategy metadata ────────────────────────────────────────────────────────
 
@@ -236,6 +241,7 @@ export async function handleOnboarding(
   const { from, text, phone_number_id } = msg;
   const input = text.body.trim();
   const lower = input.toLowerCase();
+  const requestedBalance = isBalanceIntent(lower);
 
   // ── HELP shortcut — works at any stage ───────────────────────────────────
   if (lower === "help") return HELP_MSG;
@@ -247,7 +253,25 @@ export async function handleOnboarding(
   if (!user) {
     logger.info({ from }, "New user — starting onboarding");
     await createUser(from);
+
+    if (requestedBalance) {
+      return (
+        formatMidOnboardingReply("awaiting_strategy") +
+        "\n\n" +
+        "Choose: Conservative, Balanced, or Growth."
+      );
+    }
+
     return WELCOME;
+  }
+
+  // ── Portfolio balance command ─────────────────────────────────────────────
+  if (requestedBalance) {
+    if (user.step !== "active") {
+      return formatMidOnboardingReply(user.step);
+    }
+
+    return buildPortfolioBalanceReply(user);
   }
 
   // ── Route by step ─────────────────────────────────────────────────────────

@@ -32,6 +32,8 @@ export interface User {
   encryptedPrivateKey: string | null;
   balance: number; // USDC balance
   pendingWithdrawal?: number; // amount pending confirmation
+  totalDeposited: number;
+  depositedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +57,8 @@ export async function createUser(phone: string): Promise<User> {
     walletAddress: null,
     encryptedPrivateKey: null,
     balance: 0,
+    totalDeposited: 0,
+    depositedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -88,6 +92,22 @@ export async function setUserWallet(
     walletAddress,
     encryptedPrivateKey,
     step: "awaiting_deposit",
+    updatedAt: new Date(),
+  });
+}
+
+export async function setUserDeposit(
+  phone: string,
+  totalDeposited: number,
+  depositedAt: Date = new Date(),
+): Promise<void> {
+  const user = store.get(phone);
+  if (!user) throw new Error(`User not found: ${phone}`);
+  store.set(phone, {
+    ...user,
+    totalDeposited,
+    depositedAt,
+    step: totalDeposited > 0 ? "active" : user.step,
     updatedAt: new Date(),
   });
 }
@@ -148,4 +168,5 @@ export async function updateBalance(phone: string, balance: number): Promise<voi
 export const _test = {
   clear: () => store.clear(),
   all: () => Array.from(store.values()),
+  seed: (user: User) => store.set(user.phone, user),
 };
